@@ -1,114 +1,132 @@
-# brave-hardening
+# 🦁 brave-hardening
 
-Script Bash para hardening do Brave Browser no macOS — privacidade, segurança e performance.
+> **Harden your Brave Browser on macOS for maximum privacy, security, and performance.**  
+> One script. Three layers. Zero telemetry.
 
-**Versão:** 4.0.0  
-**Compatibilidade:** macOS 13–15, Brave 1.91+ (Chromium 149+)  
-**Deploy:** manual, SSH, Jamf, Mosyle, Kandji
+<div align="center">
 
----
+[![Version](https://img.shields.io/badge/version-4.0.0-blue?style=flat-square)](https://github.com/guicoradini/brave-hardening/releases)
+[![macOS](https://img.shields.io/badge/macOS-13--15-lightgrey?style=flat-square&logo=apple)](https://www.apple.com/macos/)
+[![Brave](https://img.shields.io/badge/Brave-1.91+-orange?style=flat-square&logo=brave)](https://brave.com)
+[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
-## O que faz
+**🌐 Read this in another language:**
 
-O script aplica configurações em três camadas independentes, do nível de sistema até o perfil de cada usuário.
+[🇧🇷 Português Brasileiro](README.pt-BR.md) &nbsp;|&nbsp; [🇪🇸 Español](README.es.md)
 
-### Camada 1 — plist (sistema)
-
-Escreve `/Library/Managed Preferences/com.brave.Browser.plist` como política de sistema gerenciada. Sobrevive a reinstalações do Brave e se aplica a todos os usuários da máquina.
-
-| Categoria | Configurações |
-|---|---|
-| **Bloat** | Leo AI, Rewards, Wallet, VPN, Tor, News, Talk, imagens patrocinadas — tudo desabilitado |
-| **Telemetria** | P3A, stats ping, Web Discovery, Metrics Reporting — desabilitados |
-| **Privacidade** | WebRTC → `disable_non_proxied_udp`, HTTPS-Only forçado, DNT, GPC, WebUSB bloqueado, sensores bloqueados, First Party Ephemeral Storage ativo, pagamentos e autofill de cartão desabilitados |
-| **Segurança** | Safe Browsing habilitado (proteção padrão), filesystem read/write guard ativo |
-| **Performance** | High Efficiency Mode, Network Prediction desabilitado, Background Mode desabilitado |
-
-### Camada 2 — Preferences (por usuário)
-
-Modifica `~/Library/Application Support/BraveSoftware/Brave-Browser/Default/Preferences` de cada usuário real da máquina. Faz backup automático com extensão `.bak` antes de qualquer alteração.
-
-- **Brave Shields:** modo Agressivo global para anúncios, trackers e cosmetic filtering
-- **Nova aba:** fundo preto sólido (`#000000`), somente relógio (stats, top sites e search bar desabilitados)
-- **Privacy Sandbox:** Topics, FLEDGE e Ad Measurement desabilitados
-- **Sugestões de pesquisa:** desabilitadas
-- **Google Sign-In:** desabilitado
-- **Pagamentos e autofill de cartão:** desabilitados
-- **WebRTC e DoNotTrack:** reforço em nível de perfil (backup do plist)
-
-### Camada 3 — Local State (por usuário)
-
-Modifica `~/Library/Application Support/BraveSoftware/Brave-Browser/Local State` de cada usuário. Também faz backup `.bak`. É onde o Brave efetivamente armazena filter lists, flags e tuning de performance.
-
-| Categoria | Detalhes |
-|---|---|
-| **Custom filter lists** | [uBlock Filters](https://ublockorigin.github.io/uAssets/filters/filters.min.txt) + [Legitimate URL Shortener](https://raw.githubusercontent.com/DandelionSprout/adfilt/master/LegitimateURLShortener.txt) |
-| **Regional filters** | Brave Experimental, Annoyances, Cookie Notices, Twitch Adblock + outras listas nativas habilitadas por UUID |
-| **Browser flags** | `brave-adblock-default-1p-blocking`, `enable-parallel-downloading`, `enable-quic`, `heuristic-memory-saver-mode` (Aggressive), `brave-adblock-cookie-list-opt-in` |
-| **Performance** | Memory Saver Aggressive (`aggressiveness: 2`) + Battery Saver |
-| **P3A** | Telemetria de produto desabilitada também no Local State |
-
-> As listas existentes do usuário são **preservadas** — o script apenas adiciona/atualiza as entradas necessárias.
+</div>
 
 ---
 
-## Opções de execução
+## 📋 Overview
+
+`brave-hardening.sh` is a Bash script that applies a comprehensive set of privacy and performance configurations to the Brave Browser on macOS. It works across three independent layers — from system-wide managed policies down to per-user profile settings.
+
+Compatible with manual deployment, SSH, and MDM solutions (Jamf, Mosyle, Kandji).
+
+---
+
+## 🏗️ Architecture: Three Layers
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Layer 1 · plist (System)                           │
+│  /Library/Managed Preferences/com.brave.Browser.plist│
+│  → Survives reinstalls · Applies to all users       │
+├─────────────────────────────────────────────────────┤
+│  Layer 2 · Preferences (Per-user)                   │
+│  ~/Library/.../Brave-Browser/Default/Preferences    │
+│  → Shields · New Tab Page · Privacy Sandbox         │
+├─────────────────────────────────────────────────────┤
+│  Layer 3 · Local State (Per-user)                   │
+│  ~/Library/.../Brave-Browser/Local State            │
+│  → Filter lists · Flags · Performance tuning        │
+└─────────────────────────────────────────────────────┘
+```
+
+### 🛡️ Layer 1 — System plist
+
+Writes a managed policy file that Brave reads at startup, applied to all users on the machine.
+
+| Category | What gets configured |
+|---|---|
+| 🧹 **Bloat removal** | Leo AI, Rewards, Wallet, VPN, Tor, News, Talk, sponsored images — all disabled |
+| 📡 **Telemetry** | P3A, stats ping, Web Discovery, Metrics Reporting — all disabled |
+| 🔒 **Privacy** | WebRTC → `disable_non_proxied_udp`, HTTPS-Only forced, DNT & GPC enabled, WebUSB & sensors blocked, First Party Ephemeral Storage enabled, payments & credit card autofill disabled |
+| 🔐 **Security** | Safe Browsing enabled (standard), filesystem read/write guard active |
+| ⚡ **Performance** | High Efficiency Mode on, Network Prediction off, Background Mode off |
+
+### 👤 Layer 2 — Preferences (per user)
+
+Modifies each real user's Preferences file. A `.bak` backup is created before any change.
+
+- **Brave Shields:** Aggressive mode globally (ads + trackers + cosmetic filtering)
+- **New Tab Page:** solid black background (`#000000`), clock only — stats, top sites, and search bar disabled
+- **Privacy Sandbox:** Topics, FLEDGE, and Ad Measurement disabled
+- **Search suggestions:** disabled
+- **Google Sign-In:** disabled
+- **Payments & credit card autofill:** disabled
+- **WebRTC & DoNotTrack:** reinforced at profile level (backs up plist)
+
+### 📦 Layer 3 — Local State (per user)
+
+Modifies each user's Local State file. Also creates `.bak` backup. This is where Brave actually stores filter lists, feature flags, and performance settings.
+
+| Category | Details |
+|---|---|
+| 📋 **Custom filter lists** | uBlock Filters + Legitimate URL Shortener |
+| 🌍 **Regional filters** | Brave Experimental, Annoyances, Cookie Notices, Twitch Adblock + additional native lists |
+| 🚩 **Feature flags** | `brave-adblock-default-1p-blocking`, `enable-parallel-downloading`, `enable-quic`, `heuristic-memory-saver-mode` (Aggressive), `brave-adblock-cookie-list-opt-in` |
+| ⚡ **Performance** | Memory Saver Aggressive + Battery Saver |
+| 📡 **P3A** | Product analytics disabled also at Local State level |
+
+> Existing user filter lists and flags are **preserved** — the script merges, never overwrites.
+
+---
+
+## 🚀 Usage
+
+> **Requires `sudo`.** The script will refuse to run without root privileges.
 
 ```bash
-# Aplica somente as políticas de sistema (plist)
+# Apply system policies only (plist)
 sudo ./brave-hardening.sh
 
-# Aplica somente as Preferences de cada usuário
+# Apply per-user Preferences only
 sudo ./brave-hardening.sh --prefs
 
-# Aplica somente o Local State de cada usuário
+# Apply per-user Local State only
 sudo ./brave-hardening.sh --local
 
-# Aplica tudo: plist + Preferences + Local State
+# Apply everything (recommended)
 sudo ./brave-hardening.sh --all
 
-# Verifica o estado atual do hardening
+# Verify current hardening state
 sudo ./brave-hardening.sh --verify
 
-# Remove tudo que o script aplicou
+# Undo all changes
 sudo ./brave-hardening.sh --revert
 ```
 
-> Requer `sudo`. O script recusa execução sem privilégios de root.
-
 ---
 
-## Dependências
+## ✅ Verify
 
-- `bash` 4+ (via `#!/usr/bin/env bash`)
-- `python3` (disponível por padrão no macOS 12+)
-- `plutil` (nativo do macOS)
-- `dscl` (nativo do macOS)
-
----
-
-## Comportamento de segurança
-
-- O Brave é **encerrado automaticamente** (`killall "Brave Browser"`) antes de modificar Preferences ou Local State, para evitar que o browser sobrescreva as alterações ao fechar.
-- Backups são criados com extensão `.bak` ao lado de cada arquivo modificado.
-- O plist é validado com `plutil -lint` após a escrita; em caso de XML inválido, o script aborta com erro.
-- Flags existentes no `browser.enabled_labs_experiments` são **preservadas** — o script faz union com as flags desejadas.
-
----
-
-## Verificação
-
-O comando `--verify` inspeciona o estado atual e exibe um checklist por usuário:
+The `--verify` flag inspects the current state and prints a checklist per user:
 
 ```
-── Usuário: joao
+── User: john
   [Preferences]
     ✓  Shields Aggressive ads
     ✓  Shields Aggressive trackers
     ✓  Cosmetic filtering
     ✓  Privacy Sandbox off
     ✓  Search suggestions off
-    ...
+    ✓  Google Sign-In off
+    ✓  Payments off
+    ✓  WebRTC leak off
+    ✓  Black NTP background
+    ✓  NTP clock only
   [Local State]
     ✓  Custom filter lists (2)
     ✓  Regional filters (7)
@@ -118,16 +136,41 @@ O comando `--verify` inspeciona o estado atual e exibe um checklist por usuário
     ✓  P3A off
 ```
 
-Para validação adicional dentro do browser: `brave://policy` e `brave://settings/shields`.
+For additional validation inside the browser: `brave://policy` and `brave://settings/shields`.
 
 ---
 
-## Revert
+## ↩️ Revert
 
-O comando `--revert` desfaz as alterações:
+The `--revert` flag undoes the following:
 
-- Remove o plist de sistema
-- Remove as entradas de Shields (shieldsAds, trackers, cosmeticFilteringV2) das Preferences
-- Remove `list_subscriptions` e `regional_filters` do Local State
+- Removes the system plist
+- Removes Shields entries (shieldsAds, trackers, cosmeticFilteringV2) from Preferences
+- Removes `list_subscriptions` and `regional_filters` from Local State
 
-> Flags e configurações de performance **não** são revertidas pelo `--revert`. Para restauração completa, use o backup `.bak`.
+> Feature flags and performance settings are **not** reverted. For a full rollback, restore from the `.bak` files created alongside each modified file.
+
+---
+
+## 🔧 Requirements
+
+- `bash` 4+ (via `#!/usr/bin/env bash`)
+- `python3` (available by default on macOS 12+)
+- `plutil` (macOS native)
+- `dscl` (macOS native)
+
+---
+
+## 🌐 Languages
+
+| Language | Link |
+|---|---|
+| 🇺🇸 English | You are here |
+| 🇧🇷 Português Brasileiro | [README.pt-BR.md](README.pt-BR.md) |
+| 🇪🇸 Español | [README.es.md](README.es.md) |
+
+---
+
+## 📄 License
+
+[MIT](LICENSE)
