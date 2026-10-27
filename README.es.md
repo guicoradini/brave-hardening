@@ -61,7 +61,7 @@ Escribe un archivo de política administrada que Brave lee al iniciar, aplicado 
 Modifica el archivo Preferences de cada usuario real del sistema. Se crea una copia de seguridad `.bak` antes de cualquier cambio.
 
 - **Brave Shields:** modo Agresivo global (anuncios + rastreadores + cosmetic filtering)
-- **Nueva pestaña:** fondo negro sólido (`#000000`), solo reloj — estadísticas, sitios frecuentes y barra de búsqueda deshabilitados
+- **Nueva pestaña:** solo reloj — estadísticas, sitios frecuentes y barra de búsqueda deshabilitados
 - **Privacy Sandbox:** Topics, FLEDGE y Ad Measurement deshabilitados
 - **Sugerencias de búsqueda:** deshabilitadas
 - **Inicio de sesión con Google:** deshabilitado
@@ -125,7 +125,6 @@ La flag `--verify` inspecciona el estado actual y muestra una lista de verificac
     ✓  Google Sign-In off
     ✓  Payments off
     ✓  WebRTC leak off
-    ✓  NTP fondo negro
     ✓  NTP solo reloj
   [Local State]
     ✓  Custom filter lists (2)
