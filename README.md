@@ -61,7 +61,7 @@ Writes a managed policy file that Brave reads at startup, applied to all users o
 Modifies each real user's Preferences file. A `.bak` backup is created before any change.
 
 - **Brave Shields:** Aggressive mode globally (ads + trackers + cosmetic filtering)
-- **New Tab Page:** solid black background (`#000000`), clock only — stats, top sites, and search bar disabled
+- **New Tab Page:** clock only — stats, top sites, and search bar disabled
 - **Privacy Sandbox:** Topics, FLEDGE, and Ad Measurement disabled
 - **Search suggestions:** disabled
 - **Google Sign-In:** disabled
@@ -125,7 +125,6 @@ The `--verify` flag inspects the current state and prints a checklist per user:
     ✓  Google Sign-In off
     ✓  Payments off
     ✓  WebRTC leak off
-    ✓  Black NTP background
     ✓  NTP clock only
   [Local State]
     ✓  Custom filter lists (2)

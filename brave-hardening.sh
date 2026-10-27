@@ -150,14 +150,8 @@ ex.setdefault("cosmeticFilteringV2",  {})["*,*"] = {"last_modified": ts, "settin
 # Brave Shields advanced view
 p.setdefault("brave", {}).setdefault("shields", {})["advanced_view_enabled"] = True
 
-# Nova aba — fundo preto sólido, só relógio
+# Nova aba — só relógio
 p["brave"].setdefault("new_tab_page", {}).update({
-    "background": {
-        "random": False,
-        "selected_value": "#000000",
-        "type": "color"
-    },
-    "show_background_image": True,
     "show_clock": True,
     "show_stats": False,
 })
@@ -369,7 +363,6 @@ checks = {
     "Signin Google off":           not p.get("signin", {}).get("allowed", True),
     "Payments off":                not p.get("payments", {}).get("can_make_payment_enabled", True),
     "WebRTC leak off":             p.get("webrtc", {}).get("ip_handling_policy") == "disable_non_proxied_udp",
-    "NTP fundo preto":             p.get("brave", {}).get("new_tab_page", {}).get("background", {}).get("selected_value") == "#000000",
     "NTP só relógio":              p.get("brave", {}).get("new_tab_page", {}).get("show_clock") == True and p.get("brave", {}).get("new_tab_page", {}).get("show_stats") == False,
 }
 print("  [Preferences]")
@@ -489,7 +482,7 @@ print_summary() {
   echo "   Shields Aggressive global (ads + trackers + cosmetic)"
   echo "   Privacy Sandbox OFF | Search suggestions OFF"
   echo "   Signin Google OFF | Payments OFF | Autofill cartão OFF"
-  echo "   Nova aba: fundo preto + relógio"
+  echo "   Nova aba: só relógio"
   echo ""
   echo " [Local State] POR USUÁRIO"
   echo "   Filter lists: uBlock Filters + Legitimate URL Shortener"
