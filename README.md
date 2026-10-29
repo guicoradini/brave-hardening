@@ -34,8 +34,8 @@ Compatible with manual deployment, SSH, and MDM solutions (Jamf, Mosyle, Kandji)
 │  /Library/Managed Preferences/com.brave.Browser.plist│
 │  → Survives reinstalls · Applies to all users       │
 ├─────────────────────────────────────────────────────┤
-│  Layer 2 · Preferences (Per-user)                   │
-│  ~/Library/.../Brave-Browser/Default/Preferences    │
+│  Layer 2 · Preferences (Per-profile, all)           │
+│  ~/Library/.../Brave-Browser/<profile>/Preferences  │
 │  → Shields · New Tab Page · Privacy Sandbox         │
 ├─────────────────────────────────────────────────────┤
 │  Layer 3 · Local State (Per-user)                   │
@@ -56,12 +56,13 @@ Writes a managed policy file that Brave reads at startup, applied to all users o
 | 🔐 **Security** | Safe Browsing enabled (standard), filesystem read/write guard active |
 | ⚡ **Performance** | High Efficiency Mode on, Network Prediction off, Background Mode off |
 
-### 👤 Layer 2 — Preferences (per user)
+### 👤 Layer 2 — Preferences (every profile)
 
 Modifies each real user's Preferences file. A `.bak` backup is created before any change.
 
 - **Brave Shields:** Aggressive mode globally (ads + trackers + cosmetic filtering)
-- **New Tab Page:** clock only — stats, top sites, and search bar disabled
+- **New Tab Page:** blank page, no clock (white `#FFFFFF` fallback background) — stats, top sites, and search bar disabled
+- **UI / extras:** Leo integrations, VPN/Wallet buttons, Wayback Machine, Translate and push (GCM) off; vertical tabs; full URLs in the address bar
 - **Privacy Sandbox:** Topics, FLEDGE, and Ad Measurement disabled
 - **Search suggestions:** disabled
 - **Google Sign-In:** disabled
@@ -116,7 +117,7 @@ The `--verify` flag inspects the current state and prints a checklist per user:
 
 ```
 ── User: john
-  [Preferences]
+  [Preferences — Default]
     ✓  Shields Aggressive ads
     ✓  Shields Aggressive trackers
     ✓  Cosmetic filtering
@@ -125,7 +126,12 @@ The `--verify` flag inspects the current state and prints a checklist per user:
     ✓  Google Sign-In off
     ✓  Payments off
     ✓  WebRTC leak off
-    ✓  NTP clock only
+    ✓  NTP white background
+    ✓  Grayscale theme off
+    ✓  NTP blank page
+    ✓  NTP no clock/stats
+    ✓  Translate off
+    ✓  Vertical tabs
   [Local State]
     ✓  Custom filter lists (2)
     ✓  Regional filters (7)

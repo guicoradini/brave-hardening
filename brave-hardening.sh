@@ -6,7 +6,7 @@
 #
 # Uso:
 #   sudo ./brave-hardening.sh           # aplica políticas de sistema (plist)
-#   sudo ./brave-hardening.sh --prefs   # aplica Preferences por usuário
+#   sudo ./brave-hardening.sh --prefs   # aplica Preferences em todos os perfis
 #   sudo ./brave-hardening.sh --local   # aplica Local State por usuário
 #   sudo ./brave-hardening.sh --all     # aplica tudo
 #   sudo ./brave-hardening.sh --verify  # verifica estado
@@ -14,7 +14,8 @@
 #
 # CAMADAS:
 #   1. plist       → /Library/Managed Preferences/com.brave.Browser.plist
-#   2. Preferences → ~/Library/.../Brave-Browser/Default/Preferences
+#   2. Preferences → ~/Library/.../Brave-Browser/<perfil>/Preferences
+#      (Default + "Profile N" — todos os perfis do usuário)
 #   3. Local State → ~/Library/.../Brave-Browser/Local State
 #      (filter lists, regional filters, flags, performance — ficam aqui)
 #
@@ -26,7 +27,6 @@ set -euo pipefail
 PLIST_DIR="/Library/Managed Preferences"
 PLIST_PATH="${PLIST_DIR}/com.brave.Browser.plist"
 BRAVE_BASE="Library/Application Support/BraveSoftware/Brave-Browser"
-BRAVE_PREFS="${BRAVE_BASE}/Default/Preferences"
 BRAVE_LOCAL="${BRAVE_BASE}/Local State"
 SCRIPT_VERSION="4.0.0"
 LOG_PREFIX="[brave-hardening]"
@@ -50,6 +50,14 @@ get_real_users() {
   dscl . list /Users | grep -v '^_' | grep -vE '^(root|daemon|nobody|Guest)$' || true
 }
 get_home() { dscl . read "/Users/$1" NFSHomeDirectory 2>/dev/null | awk '{print $2}' || echo ""; }
+# Diretórios de perfil com Preferences: Default + "Profile N"
+# (System Profile e Guest Profile ficam de fora de propósito)
+get_profile_dirs() {
+  local base="$1/${BRAVE_BASE}" dir
+  for dir in "${base}/Default" "${base}"/Profile\ *; do
+    if [[ -f "${dir}/Preferences" ]]; then echo "$dir"; fi
+  done
+}
 
 # =============================================================================
 # CAMADA 1: plist — políticas de sistema (root, sobrevive a reinstall)
@@ -113,18 +121,20 @@ PLIST_EOF
 # CAMADA 2: Preferences — configurações de perfil por usuário
 # =============================================================================
 cmd_prefs() {
-  log "Aplicando Preferences por usuário..."
+  log "Aplicando Preferences em todos os perfis..."
   kill_brave
 
   local applied=0 skipped=0
   while IFS= read -r user; do
     local home; home=$(get_home "$user")
     [[ -z "$home" || ! -d "$home" ]] && continue
-    local path="${home}/${BRAVE_PREFS}"
-    if [[ ! -f "$path" ]]; then
+    if [[ -z "$(get_profile_dirs "$home")" ]]; then
       warn "Preferences não encontrado para: ${user}"; ((skipped++)) || true; continue
     fi
-    log "Preferences → ${user}"
+    while IFS= read -r profile_dir; do
+    local path="${profile_dir}/Preferences"
+    local label; label="${user}/$(basename "$profile_dir")"
+    log "Preferences → ${label}"
 
     python3 << PYEOF
 import json, shutil, time
@@ -150,11 +160,51 @@ ex.setdefault("cosmeticFilteringV2",  {})["*,*"] = {"last_modified": ts, "settin
 # Brave Shields advanced view
 p.setdefault("brave", {}).setdefault("shields", {})["advanced_view_enabled"] = True
 
-# Nova aba — só relógio
+# Nova aba — página em branco (shows_options: 0=dashboard, 1=homepage, 2=em branco),
+# sem relógio; fundo branco caso volte para o dashboard
 p["brave"].setdefault("new_tab_page", {}).update({
-    "show_clock": True,
+    "background": {
+        "random": False,
+        "selected_value": "#FFFFFF",
+        "type": "color"
+    },
+    "shows_options": 2,
+    "show_clock": False,
     "show_stats": False,
 })
+
+# Leo (AI chat) — integrações off (o plist já desativa o Leo)
+p["brave"].setdefault("ai_chat", {}).update({
+    "autocomplete_provider_enabled": False,
+    "context_menu_enabled": False,
+    "show_toolbar_button": False,
+    "storage_enabled": False,
+    "tab_organization_enabled": False,
+})
+
+# Botões / extras do Brave off
+p["brave"].setdefault("brave_vpn", {})["show_button"] = False
+p["brave"].setdefault("wallet", {})["show_wallet_icon_on_toolbar"] = False
+p["brave"].setdefault("brave_ads", {}).setdefault("sponsored", {})["enabled"] = False
+p["brave"]["wayback_machine_enabled"] = False
+p["brave"].setdefault("gcm", {})["channel_status"] = False
+p["brave"].setdefault("webcompat", {}).setdefault("report", {})["enable_save_contact_info"] = False
+
+# Tradutor (Google Translate) off
+p.setdefault("translate", {})["enabled"] = False
+
+# Barra de endereço — sempre mostra a URL completa
+p.setdefault("omnibox", {})["prevent_url_elisions"] = True
+
+# Abas verticais à esquerda, sem título na janela
+p["brave"].setdefault("tabs", {}).update({
+    "vertical_tabs_enabled": True,
+    "vertical_tabs_on_right": False,
+    "vertical_tabs_show_title_on_window": False,
+})
+
+# Tema em escala de cinza off — mantém todos os perfis iguais
+p.get("browser", {}).get("theme", {}).pop("is_grayscale2", None)
 
 # Search bar da nova aba off
 p["brave"].setdefault("brave_search", {})["show-ntp-search"] = False
@@ -196,8 +246,9 @@ with open(path, "w") as f:
     json.dump(p, f, separators=(",", ":"))
 print("  OK")
 PYEOF
-    [[ $? -eq 0 ]] && { ok "Preferences → ${user}"; ((applied++)) || true; } \
-                   || { err "Falha → ${user}"; ((skipped++)) || true; }
+    [[ $? -eq 0 ]] && { ok "Preferences → ${label}"; ((applied++)) || true; } \
+                   || { err "Falha → ${label}"; ((skipped++)) || true; }
+    done < <(get_profile_dirs "$home")
   done < <(get_real_users)
   log "Preferences: ${applied} OK, ${skipped} ignorados"
 }
@@ -341,14 +392,15 @@ cmd_verify() {
   while IFS= read -r user; do
     local home; home=$(get_home "$user")
     [[ -z "$home" || ! -d "$home" ]] && continue
-    local prefs="${home}/${BRAVE_PREFS}"
     local local_state="${home}/${BRAVE_LOCAL}"
-    ([[ -f "$prefs" ]] || [[ -f "$local_state" ]]) || continue
+    ([[ -n "$(get_profile_dirs "$home")" ]] || [[ -f "$local_state" ]]) || continue
 
     echo "── Usuário: ${user}"
 
-    # Preferences
-    if [[ -f "$prefs" ]]; then
+    # Preferences (um bloco por perfil)
+    while IFS= read -r profile_dir; do
+      local prefs="${profile_dir}/Preferences"
+      local profile_name; profile_name=$(basename "$profile_dir")
       python3 << PYEOF
 import json
 with open("${prefs}") as f:
@@ -363,13 +415,18 @@ checks = {
     "Signin Google off":           not p.get("signin", {}).get("allowed", True),
     "Payments off":                not p.get("payments", {}).get("can_make_payment_enabled", True),
     "WebRTC leak off":             p.get("webrtc", {}).get("ip_handling_policy") == "disable_non_proxied_udp",
-    "NTP só relógio":              p.get("brave", {}).get("new_tab_page", {}).get("show_clock") == True and p.get("brave", {}).get("new_tab_page", {}).get("show_stats") == False,
+    "NTP fundo branco":            p.get("brave", {}).get("new_tab_page", {}).get("background", {}).get("selected_value") == "#FFFFFF",
+    "Tema cinza off":              not p.get("browser", {}).get("theme", {}).get("is_grayscale2", False),
+    "NTP página em branco":        p.get("brave", {}).get("new_tab_page", {}).get("shows_options") == 2,
+    "NTP sem relógio/stats":       p.get("brave", {}).get("new_tab_page", {}).get("show_clock") == False and p.get("brave", {}).get("new_tab_page", {}).get("show_stats") == False,
+    "Tradutor off":                p.get("translate", {}).get("enabled") == False,
+    "Abas verticais":              p.get("brave", {}).get("tabs", {}).get("vertical_tabs_enabled") == True,
 }
-print("  [Preferences]")
+print("  [Preferences — ${profile_name}]")
 for label, ok in checks.items():
     print(f"    {'✓' if ok else '✗'}  {label}")
 PYEOF
-    fi
+    done < <(get_profile_dirs "$home")
 
     # Local State
     if [[ -f "$local_state" ]]; then
@@ -427,8 +484,8 @@ cmd_revert() {
     [[ -z "$home" || ! -d "$home" ]] && continue
 
     # Revert Preferences
-    local prefs="${home}/${BRAVE_PREFS}"
-    if [[ -f "$prefs" ]]; then
+    while IFS= read -r profile_dir; do
+      local prefs="${profile_dir}/Preferences"
       python3 << PYEOF
 import json, shutil
 path = "${prefs}"
@@ -441,8 +498,8 @@ for k in ["shieldsAds", "trackers", "cosmeticFilteringV2"]:
 with open(path, "w") as f:
     json.dump(p, f, separators=(",", ":"))
 PYEOF
-      ok "Preferences revertido → ${user}"
-    fi
+      ok "Preferences revertido → ${user}/$(basename "$profile_dir")"
+    done < <(get_profile_dirs "$home")
 
     # Revert Local State
     local local_state="${home}/${BRAVE_LOCAL}"
@@ -478,11 +535,12 @@ print_summary() {
   echo "   Privacidade: WebRTC, HTTPS-Only, USB, sensores, DNT, GPC"
   echo "   Performance: Memory Saver, Background OFF, NetPred OFF"
   echo ""
-  echo " [Preferences] POR USUÁRIO"
+  echo " [Preferences] POR PERFIL (todos)"
   echo "   Shields Aggressive global (ads + trackers + cosmetic)"
   echo "   Privacy Sandbox OFF | Search suggestions OFF"
   echo "   Signin Google OFF | Payments OFF | Autofill cartão OFF"
-  echo "   Nova aba: só relógio"
+  echo "   Nova aba: página em branco, sem relógio | Tema cinza OFF"
+  echo "   Leo/VPN/Wallet/Wayback/Tradutor OFF | Abas verticais | URL completa"
   echo ""
   echo " [Local State] POR USUÁRIO"
   echo "   Filter lists: uBlock Filters + Legitimate URL Shortener"

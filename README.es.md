@@ -34,8 +34,8 @@ Compatible con despliegue manual, SSH y soluciones MDM (Jamf, Mosyle, Kandji).
 │  /Library/Managed Preferences/com.brave.Browser.plist│
 │  → Sobrevive reinstalaciones · Se aplica a todos    │
 ├─────────────────────────────────────────────────────┤
-│  Capa 2 · Preferences (Por usuario)                 │
-│  ~/Library/.../Brave-Browser/Default/Preferences    │
+│  Capa 2 · Preferences (Todos los perfiles)          │
+│  ~/Library/.../Brave-Browser/<perfil>/Preferences   │
 │  → Shields · Nueva pestaña · Privacy Sandbox        │
 ├─────────────────────────────────────────────────────┤
 │  Capa 3 · Local State (Por usuario)                 │
@@ -56,12 +56,13 @@ Escribe un archivo de política administrada que Brave lee al iniciar, aplicado 
 | 🔐 **Seguridad** | Safe Browsing habilitado (protección estándar), filesystem read/write guard activo |
 | ⚡ **Rendimiento** | High Efficiency Mode activo, Network Prediction deshabilitado, Background Mode deshabilitado |
 
-### 👤 Capa 2 — Preferences (por usuario)
+### 👤 Capa 2 — Preferences (todos los perfiles)
 
 Modifica el archivo Preferences de cada usuario real del sistema. Se crea una copia de seguridad `.bak` antes de cualquier cambio.
 
 - **Brave Shields:** modo Agresivo global (anuncios + rastreadores + cosmetic filtering)
-- **Nueva pestaña:** solo reloj — estadísticas, sitios frecuentes y barra de búsqueda deshabilitados
+- **Nueva pestaña:** página en blanco, sin reloj (fondo blanco `#FFFFFF` de respaldo) — estadísticas, sitios frecuentes y barra de búsqueda deshabilitados
+- **Interfaz / extras:** integraciones de Leo, botones de VPN/Wallet, Wayback Machine, traductor y push (GCM) desactivados; pestañas verticales; URL completa en la barra de direcciones
 - **Privacy Sandbox:** Topics, FLEDGE y Ad Measurement deshabilitados
 - **Sugerencias de búsqueda:** deshabilitadas
 - **Inicio de sesión con Google:** deshabilitado
@@ -116,7 +117,7 @@ La flag `--verify` inspecciona el estado actual y muestra una lista de verificac
 
 ```
 ── Usuario: juan
-  [Preferences]
+  [Preferences — Default]
     ✓  Shields Aggressive ads
     ✓  Shields Aggressive trackers
     ✓  Cosmetic filtering
@@ -125,7 +126,12 @@ La flag `--verify` inspecciona el estado actual y muestra una lista de verificac
     ✓  Google Sign-In off
     ✓  Payments off
     ✓  WebRTC leak off
-    ✓  NTP solo reloj
+    ✓  NTP fondo blanco
+    ✓  Tema gris desactivado
+    ✓  NTP página en blanco
+    ✓  NTP sin reloj/estadísticas
+    ✓  Traductor desactivado
+    ✓  Pestañas verticales
   [Local State]
     ✓  Custom filter lists (2)
     ✓  Regional filters (7)

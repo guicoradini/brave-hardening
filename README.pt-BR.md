@@ -34,8 +34,8 @@ Compatível com deploy manual, SSH e soluções MDM (Jamf, Mosyle, Kandji).
 │  /Library/Managed Preferences/com.brave.Browser.plist│
 │  → Sobrevive a reinstalações · Aplica a todos       │
 ├─────────────────────────────────────────────────────┤
-│  Camada 2 · Preferences (Por usuário)               │
-│  ~/Library/.../Brave-Browser/Default/Preferences    │
+│  Camada 2 · Preferences (Todos os perfis)           │
+│  ~/Library/.../Brave-Browser/<perfil>/Preferences   │
 │  → Shields · Nova aba · Privacy Sandbox             │
 ├─────────────────────────────────────────────────────┤
 │  Camada 3 · Local State (Por usuário)               │
@@ -56,12 +56,13 @@ Escreve um arquivo de política gerenciada que o Brave lê ao iniciar, aplicado 
 | 🔐 **Segurança** | Safe Browsing habilitado (proteção padrão), filesystem read/write guard ativo |
 | ⚡ **Performance** | High Efficiency Mode ativo, Network Prediction desabilitado, Background Mode desabilitado |
 
-### 👤 Camada 2 — Preferences (por usuário)
+### 👤 Camada 2 — Preferences (todos os perfis)
 
 Modifica o arquivo Preferences de cada usuário real da máquina. Um backup `.bak` é criado antes de qualquer alteração.
 
 - **Brave Shields:** modo Agressivo global (anúncios + trackers + cosmetic filtering)
-- **Nova aba:** somente relógio — stats, top sites e search bar desabilitados
+- **Nova aba:** página em branco, sem relógio (fundo branco `#FFFFFF` de reserva) — stats, top sites e search bar desabilitados
+- **Interface / extras:** integrações do Leo, botões de VPN/Wallet, Wayback Machine, tradutor e push (GCM) desativados; abas verticais; URL completa na barra de endereço
 - **Privacy Sandbox:** Topics, FLEDGE e Ad Measurement desabilitados
 - **Sugestões de pesquisa:** desabilitadas
 - **Google Sign-In:** desabilitado
@@ -116,7 +117,7 @@ A flag `--verify` inspeciona o estado atual e exibe um checklist por usuário:
 
 ```
 ── Usuário: joao
-  [Preferences]
+  [Preferences — Default]
     ✓  Shields Aggressive ads
     ✓  Shields Aggressive trackers
     ✓  Cosmetic filtering
@@ -125,7 +126,12 @@ A flag `--verify` inspeciona o estado atual e exibe um checklist por usuário:
     ✓  Signin Google off
     ✓  Payments off
     ✓  WebRTC leak off
-    ✓  NTP só relógio
+    ✓  NTP fundo branco
+    ✓  Tema cinza off
+    ✓  NTP página em branco
+    ✓  NTP sem relógio/stats
+    ✓  Tradutor off
+    ✓  Abas verticais
   [Local State]
     ✓  Custom filter lists (2)
     ✓  Regional filters (7)
